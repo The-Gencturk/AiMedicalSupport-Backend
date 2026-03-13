@@ -1,1 +1,0 @@
-"""Veritanamı bağlantısı"""
