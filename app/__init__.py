@@ -1,1 +1,0 @@
-"""Brain Radiology AI application package"""
