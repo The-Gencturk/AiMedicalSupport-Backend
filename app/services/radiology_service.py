@@ -19,7 +19,7 @@ class RadiologyService:
         return None
 
     def analyze(self, image_bytes: bytes) -> dict:
-        # Bytes'dan resmi oku
+
         np_arr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 

@@ -1,14 +1,14 @@
 from fastapi import FastAPI
-from app.api.AnaylisyApi import router
-from pydantic_settings import BaseSettings
+from fastapi.middleware.cors import CORSMiddleware
+from app.api.v1.RoleController import router as role_router
+from app.api.AnaylisyApi import router as analysis_router
+from app.api.v1.AuthController import router as auth_router
 
 app = FastAPI(
     title="AiMedicalSupport API",
     description="AI-powered brain radiology image analysis API",
     version="1.0.0"
 )
-
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,7 +18,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router, prefix="/api/v1", tags=["Analysis"])
+app.include_router(analysis_router, prefix="/api/v1", tags=["Analysis"])
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(role_router, prefix="/api/v1/Role", tags=["Role"])
 
 if __name__ == "__main__":
     import uvicorn
