@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Büyük model dosyaları
+AiModels/beyin_bt_modeli.h5
+
+# Ortam değişkenleri
+.env
