@@ -28,7 +28,6 @@ class RadiologyService:
         img_norm = img_resized / 255.0
         img_input = np.reshape(img_norm, (1, 224, 224, 3))
 
-        # Tahmin
         pred = self.model.predict(img_input, verbose=0)[0][0]
 
         return {
@@ -37,6 +36,32 @@ class RadiologyService:
             "is_bleeding": bool(pred > 0.5)
         }
 
+
+
+def _get_heatmap(self, img_input):
+    try:
+        from tensorflow.keras.models import Model
+        grad_model = Model(
+            inputs=self.model.inputs,
+            outputs=[self.model.get_layer(self.last_conv_layer).output, self.model.output]
+        )
+        import tensorflow as tf
+        with tf.GradientTape() as tape:
+            conv_outputs, preds = grad_model(img_input)
+            pred_index = tf.argmax(preds[0])
+            class_channel = preds[:, pred_index]
+        grads = tape.gradient(class_channel, conv_outputs)
+        pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+        conv_outputs = conv_outputs[0]
+        heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
+        heatmap = tf.squeeze(heatmap)
+        heatmap = tf.maximum(heatmap, 0)
+        max_val = tf.math.reduce_max(heatmap)
+        if max_val == 0:
+            return None
+        return (heatmap / max_val).numpy()
+    except:
+        return None
 
     def train(self, image_bytes: bytes, label: int) -> bool:  
         try:
@@ -54,3 +79,12 @@ class RadiologyService:
             return True
         except:
             return False
+        
+
+
+        
+        
+
+
+
+        

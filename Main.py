@@ -19,6 +19,13 @@ from app.api.AnaylisyApi import router as analysis_router
 from app.api.v1.AuthController import router as auth_router
 from app.models.User import User
 from app.models.rbac import Role, Permission, RolePermission, UserRole
+from app.models.patient import Patient
+from app.models.AnalisyModel import Analysis, AnalysisReview
+from app.api.v1.PatientController import router as patient_router
+from app.db.DbContext import Base, engine
+
+Base.metadata.create_all(bind=engine)
+
 
 app = FastAPI(
     title="AiMedicalSupport API",
@@ -35,6 +42,7 @@ app.add_middleware(
 )
 
 
+app.include_router(patient_router, prefix="/api/v1/Patient", tags=["Patient"])
 app.include_router(analysis_router, prefix="/api/v1", tags=["Analysis"])
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(role_router, prefix="/api/v1/Role", tags=["Role"])
