@@ -37,3 +37,14 @@ class RoleWithPermissionsResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+
+class AllPersonel(BaseModel):
+    id: int
+    name: str
+    role_ids: List[int]
+    
+
+    class Config:
+        from_attributes = True

@@ -10,10 +10,16 @@ def seed():
             ("analyze:create", "Röntgen analizi oluştur"),
             ("analyze:read",   "Röntgen analizini incele"),
             ("analyze:delete", "Röntgen analizini sil"),
-            ("user:read",      "Kullanıcıları listele"),
-            ("user:create",    "Kullanıcı oluştur"),
-            ("user:update",    "Kullanıcı güncelle"),
-            ("user:delete",    "Kullanıcı sil"),
+            ("user:read",      "Personelleri listele"),
+            ("user:detread",   "Personelleri detaylı incele"),
+            ("user:create",    "Personelleri oluştur"),
+            ("user:update",    "Personelleri güncelle"),
+            ("user:delete",    "Personelleri sil"),
+            ("patient:read",   "Hastaları listele"),
+            ("patient:detread","Hastaları detaylı incele"),
+            ("patient:create",    "Hastaları oluştur"),
+            ("patient:update",    "Hastaları güncelle"),
+            ("patient:delete",    "Hastaları sil"),
             ("role:manage",    "Rol yönetimi"),
         ]
 
@@ -26,17 +32,17 @@ def seed():
                 db.flush()
             perms[name] = p
 
-
-        roles_data = {
-            "SuperAdmin": list(perms.keys()),
-            "Başhekim": list(perms.keys()),
-            "Başhekim Yardımcısı":  ["analyze:create", "analyze:read", "user:read","user:update","user:create","user:delete","analyze:delete","user:update"],
-            "Klinik Şefi": ["analyze:create", "analyze:read", "user:read","user:update","user:create","user:delete","analyze:delete","user:update"],
-            "Uzman_Doktor": ["analyze:create", "analyze:read", "user:read","user:update","user:create","user:delete","analyze:delete","user:update"],
-            "Doktor": ["analyze:create", "analyze:read", "user:read","user:read","user:update","user:create","analyze:delete"],
-            "Radyolog": ["analyze:create", "analyze:read", "analyze:delete"],
-            "Hasta": ["analyze:read"],
-        }
+            roles_data = {
+             "SuperAdmin":list(perms.keys()),
+             "Başhekim":list(perms.keys()),
+             "Başhekim Yardımcısı":["analyze:create","analyze:read","analyze:delete","user:read","user:detread","user:update","patient:read","patient:detread","patient:update"],
+             "Klinik Şefi":["analyze:create","analyze:read","user:read","patient:read","patient:detread","patient:update"],
+             "Uzman_Doktor":["analyze:create","analyze:read","patient:read","patient:detread","patient:update"],
+             "Doktor":["analyze:create","analyze:read","patient:read","patient:detread"],
+             "Radyolog":["analyze:create","analyze:read","analyze:delete","patient:read","patient:detread"],
+             "stajer":["analyze:read","patient:read"],
+             "Hasta":["analyze:read"],
+            }
 
         for role_name, perm_names in roles_data.items():
             role = db.query(Role).filter(Role.name == role_name).first()

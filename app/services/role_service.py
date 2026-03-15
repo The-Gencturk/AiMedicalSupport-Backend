@@ -5,7 +5,7 @@ from app.models.User import User
 from app.schemas.auth import UserRegister
 from app.core.Security import hash_password, verify_password, create_access_token
 from app.schemas.auth import UserMediumRespone
-from app.schemas.role import RoleResponse, PermissionResponse, RoleWithPermissionsResponse
+from app.schemas.role import RoleResponse, PermissionResponse, RoleWithPermissionsResponse,AllPersonel
 
 
 
@@ -75,3 +75,6 @@ def update_role_permissions(db: Session, role_id: int, permission_ids: list[int]
 
     db.commit()
     return get_role_permissions(db, role_id)
+
+
+

@@ -7,7 +7,6 @@ from app.core.Security import hash_password, verify_password, create_access_toke
 
 
 def register_user(db: Session, data: UserRegister) -> User:
-    # Email kontrolü
     existing = db.query(User).filter(User.email == data.email).first()
     if existing:
         raise HTTPException(
@@ -19,7 +18,7 @@ def register_user(db: Session, data: UserRegister) -> User:
         full_name=data.full_name,
         email=data.email,
         hashed_password=hash_password(data.password),
-        specialty=data.specialty,
+        specialty="Belirtilmedi",
     )
     db.add(user)
     db.commit()

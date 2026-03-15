@@ -6,7 +6,7 @@ from app.core.rbac import require_permission
 from app.core.Security import get_current_user
 from app.db.DbContext import get_db
 from app.models.User import User
-from app.schemas.analisy import ReviewCreate, AnalysisResponse, ReviewResponse
+from app.schemas.analisy import ReviewCreate, AnalysisResponse, ReviewResponse,AllAnalysisResponse
 from app.services.analysis_service import (
     create_analysis, get_all_analyses, get_analysis, add_review
 )
@@ -27,7 +27,7 @@ async def analyze_image(
     return create_analysis(db, patient_id, current_user.id, image_bytes, file.filename)
 
 
-@router.get("/analyses", dependencies=[Depends(require_permission("analyze:read"))])
+@router.get("/analyses", response_model=list[AllAnalysisResponse], dependencies=[Depends(require_permission("analyze:read"))])
 def list_analyses(db: Session = Depends(get_db)):
     return get_all_analyses(db)
 

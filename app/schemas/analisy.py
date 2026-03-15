@@ -9,6 +9,19 @@ class Severity(str, Enum):
     moderate = "orta"
     severe = "ciddi"
 
+
+class AllAnalysisResponse(BaseModel):
+    id: int
+    patient_id: int
+    doctor_id: Optional[int]
+    result: str
+    confidence: float
+    is_bleeding: bool
+    status: str
+
+    class Config:
+        from_attributes = True
+
 class AnalysisResponse(BaseModel):
     id: int
     patient_id: int
@@ -40,3 +53,4 @@ class ReviewResponse(BaseModel):
 
     class Config:
         from_attributes = True
+

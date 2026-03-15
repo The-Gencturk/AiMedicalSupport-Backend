@@ -4,7 +4,7 @@ import numpy as np
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models.AnalisyModel import Analysis, AnalysisReview, AnalysisStatus
-from app.schemas.analisy import ReviewCreate
+from app.schemas.analisy import ReviewCreate, AllAnalysisResponse
 from app.services.radiology_service import RadiologyService
 
 UPLOAD_DIR = r"C:\Users\LENOVO\Desktop\Projeler\AiMedicalSupport-Backend\uploads"

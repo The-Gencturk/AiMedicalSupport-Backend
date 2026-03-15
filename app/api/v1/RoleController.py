@@ -22,9 +22,7 @@ def delete_user(id: int):
     pass
 
 
-@router.get("/GetAllPersonel", dependencies=[Depends(require_permission("user:read"))])
-def list_users():
-    pass
+
 
 
 @router.put("/UpdateUserRole", dependencies=[Depends(require_permission("role:manage"))])
@@ -57,6 +55,7 @@ def update_role_perms(role_id: int, data: RolePermissionUpdateSchema, db: Sessio
     return update_role_permissions(db, role_id, data.permission_ids)
 
 
+
 @router.get("/profile")
 def profile(current_user: User = Depends(get_current_user)):
     return {
@@ -68,3 +67,4 @@ def profile(current_user: User = Depends(get_current_user)):
         "created_at": current_user.created_at,
         "roles": current_user.get_roles()
     }
+

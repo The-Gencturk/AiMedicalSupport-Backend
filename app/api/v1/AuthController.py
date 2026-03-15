@@ -43,3 +43,11 @@ def get_me(current_user: User = Depends(get_current_user)):
         "created_at": current_user.created_at,
         "roles": current_user.get_roles()
     }
+
+
+
+
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie(key="access_token")
+    return {"message": "Çıkış başarılı"}
