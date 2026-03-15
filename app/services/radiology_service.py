@@ -36,3 +36,21 @@ class RadiologyService:
             "confidence": int(pred * 100) if pred > 0.5 else int((1 - pred) * 100),
             "is_bleeding": bool(pred > 0.5)
         }
+
+
+    def train(self, image_bytes: bytes, label: int) -> bool:  
+        try:
+            from tensorflow.keras.optimizers import Adam
+            np_arr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            img = cv2.resize(img, (224, 224)) / 255.0
+            img_input = np.reshape(img, (1, 224, 224, 3))
+            label_arr = np.array([[label]])
+            self.model.compile(optimizer=Adam(learning_rate=0.00001),
+                              loss='binary_crossentropy',
+                              metrics=['accuracy'])
+            self.model.fit(img_input, label_arr, epochs=1, verbose=0)
+            self.model.save(MODEL_PATH)
+            return True
+        except:
+            return False

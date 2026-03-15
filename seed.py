@@ -33,7 +33,7 @@ def seed():
             "Başhekim Yardımcısı":  ["analyze:create", "analyze:read", "user:read","user:update","user:create","user:delete","analyze:delete","user:update"],
             "Klinik Şefi": ["analyze:create", "analyze:read", "user:read","user:update","user:create","user:delete","analyze:delete","user:update"],
             "Uzman_Doktor": ["analyze:create", "analyze:read", "user:read","user:update","user:create","user:delete","analyze:delete","user:update"],
-            "Doktor": ["analyze:create", "analyze:read", "user:read","user:read","user:update","user:create","analyze:delete","user:update"],
+            "Doktor": ["analyze:create", "analyze:read", "user:read","user:read","user:update","user:create","analyze:delete"],
             "Radyolog": ["analyze:create", "analyze:read", "analyze:delete"],
             "Hasta": ["analyze:read"],
         }

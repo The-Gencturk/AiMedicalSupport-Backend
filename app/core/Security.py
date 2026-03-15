@@ -49,7 +49,6 @@ def get_current_user(
         detail="Kimlik doğrulanamadı",
     )
     
-    # Cookie'den token oku
     token = request.cookies.get("access_token")
     if not token:
         raise credentials_exception

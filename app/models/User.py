@@ -41,3 +41,4 @@ class User(Base):
             for rp in user_role.role.permissions:
                 perms.add(rp.permission.name)
         return list(perms)
+    
