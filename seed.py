@@ -9,6 +9,8 @@ def seed():
             ("analyze:create", "Röntgen analizi oluştur"),
             ("analyze:read",   "Röntgen analizini incele"),
             ("analyze:delete", "Röntgen analizini sil"),
+            ("analyze:Update", "Röntgen analizini düzenle"),
+            ("analyze:detread", "Röntgen analizini detaylı incele"),
             ("user:read",      "Personelleri listele"),
             ("user:detread",   "Personelleri detaylı incele"),
             ("user:create",    "Personelleri oluştur"),
@@ -19,7 +21,11 @@ def seed():
             ("patient:create", "Hastaları oluştur"),
             ("patient:update", "Hastaları güncelle"),
             ("patient:delete", "Hastaları sil"),
-            ("role:manage",    "Rol yönetimi"),
+            ("role:manage",    "Rolleri full kotrol"),
+            ("role:read",      "Rolleri göster"),
+            ("role:detread",   "Rolleri detaylı incele"),
+            ("role:update",    "Rolleri düzenle"),
+            ("role:delete",    "Rolleri sil"),
         ]
 
         perms = {}
@@ -40,7 +46,7 @@ def seed():
             "Doktor": ["analyze:create","analyze:read","patient:read","patient:detread"],
             "Radyolog": ["analyze:create","analyze:read","analyze:delete","patient:read","patient:detread"],
             "stajer": ["analyze:read","patient:read"],
-            "Hasta": ["analyze:read"],
+            "Hasta": ["analyze:read","analyze:create",],
         }
 
         for role_name, perm_names in roles_data.items():

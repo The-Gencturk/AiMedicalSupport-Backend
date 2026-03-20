@@ -26,6 +26,7 @@ def get_ById_personel(db: Session, user_id: int):
         id=user.id,
         full_name=user.full_name,
         email=user.email,
+        profile = user.profile,
         specialty=user.specialty,
         is_active=user.is_active,
         roles=user.get_roles()

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-
+from app.models.rbac import Role, UserRole
 from app.models.User import User
 from app.schemas.auth import UserRegister
 from app.core.Security import hash_password, verify_password, create_access_token
@@ -18,9 +18,16 @@ def register_user(db: Session, data: UserRegister) -> User:
         full_name=data.full_name,
         email=data.email,
         hashed_password=hash_password(data.password),
-        specialty="Belirtilmedi",
+        specialty="Hasta",
     )
     db.add(user)
+    db.flush()
+
+  
+    hasta_role = db.query(Role).filter(Role.name == "Hasta").first()
+    if hasta_role:
+     db.add(UserRole(user_id=user.id, role_id=hasta_role.id))
+
     db.commit()
     db.refresh(user)
     return user

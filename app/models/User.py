@@ -10,6 +10,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
+    profile = Column(String, unique=True, index=True, nullable=True)
     hashed_password = Column(String, nullable=False)
     specialty = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)

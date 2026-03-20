@@ -22,9 +22,6 @@ def delete_user(id: int):
     pass
 
 
-
-
-
 @router.put("/UpdateUserRole", dependencies=[Depends(require_permission("role:manage"))])
 def update_user_role(data: UpdateUserRoleSchema, db: Session = Depends(get_db)):
     return role_update(db, data.id, data.role_ids)

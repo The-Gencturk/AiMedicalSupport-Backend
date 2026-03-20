@@ -26,7 +26,7 @@ def login(data: UserLogin, response: Response, db: Session = Depends(get_db)):
         key="access_token",
         value=result["access_token"],
         httponly=True,       
-        secure=True,          
+        secure=False,          
         samesite="lax",      
         max_age=60 * 60 * 24  # 1 gün
     )
@@ -38,6 +38,7 @@ def get_me(current_user: User = Depends(get_current_user)):
         "id": current_user.id,
         "full_name": current_user.full_name,
         "email": current_user.email,
+        "profile" : current_user.profile, 
         "specialty": current_user.specialty,
         "is_active": current_user.is_active,
         "created_at": current_user.created_at,
@@ -45,8 +46,7 @@ def get_me(current_user: User = Depends(get_current_user)):
     }
 
 
-
-
+    
 @router.post("/logout")
 def logout(response: Response):
     response.delete_cookie(key="access_token")

@@ -18,6 +18,7 @@ class PersonelResponse(BaseModel):
     id: int
     full_name: str
     email: str
+    person_profile: str
     specialty: Optional[str]
     is_active: bool
     roles: List[str] = []
