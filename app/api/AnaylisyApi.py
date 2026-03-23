@@ -14,7 +14,7 @@ from app.services.analysis_service import (
 router = APIRouter()
 
 
-@router.post("/analyze", dependencies=[Depends(require_permission("analyze:create"))])
+@router.post("/analyzeCreate", dependencies=[Depends(require_permission("analyze:create"))])
 async def analyze_image(
     patient_id: int,
     file: UploadFile = File(...),
@@ -22,7 +22,8 @@ async def analyze_image(
     current_user: User = Depends(get_current_user)
 ):
     if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Sadece resim dosyası yükleyebilirsiniz")
+        raise HTTPException(status_code=400,
+        tail="Sadece resim dosyası yükleyebilirsiniz")
     image_bytes = await file.read()
     return create_analysis(db, patient_id, current_user.id, image_bytes, file.filename)
 

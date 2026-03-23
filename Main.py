@@ -19,11 +19,12 @@ from app.api.AnaylisyApi import router as analysis_router
 from app.api.v1.AuthController import router as auth_router
 from app.api.v1.PersonelController import router as personel_router
 from app.models.User import User
-from app.models.rbac import Role, Permission, RolePermission, UserRole
 from app.models.patient import Patient
+from fastapi.staticfiles import StaticFiles
 from app.models.AnalisyModel import Analysis, AnalysisReview
 from app.api.v1.PatientController import router as patient_router
 from app.db.DbContext import Base, engine
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -42,6 +43,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/uploads", StaticFiles(directory=r"C:\Users\LENOVO\Desktop\Projeler\AiMedicalSupport-Backend\uploads"), name="uploads")
+app.mount("/wwwroot/UserProfile", StaticFiles(directory="wwwroot/UserProfile"), name="profile")
 app.include_router(personel_router,prefix="/api/v1/personel", tags=["Personel"])
 app.include_router(patient_router, prefix="/api/v1/Patient", tags=["Patient"])
 app.include_router(analysis_router, prefix="/api/v1", tags=["Analysis"])

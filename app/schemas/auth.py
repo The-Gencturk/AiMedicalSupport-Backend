@@ -33,6 +33,18 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
+class MeResponse(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    specialty: Optional[str]
+    is_active: bool
+    profile: str
+
+    class Config:
+        from_attributes = True
+
+
 class UserFullResponse(BaseModel):
     id: int
     full_name: str
@@ -54,6 +66,11 @@ class UserMediumRespone(BaseModel):
 
     class Config:
         from_attributes = True
+
+class UpdateMe(BaseModel):
+    full_name: Optional[str] = None
+    specialty: Optional[str] = None
+    profile: Optional[str] = None
 
 
 class LoginResponse(BaseModel):

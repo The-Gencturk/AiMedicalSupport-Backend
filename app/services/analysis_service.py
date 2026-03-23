@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+import traceback
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models.AnalisyModel import Analysis, AnalysisReview, AnalysisStatus
@@ -16,19 +17,42 @@ radiology = RadiologyService()
 
 
 def create_analysis(db: Session, patient_id: int, doctor_id: int, image_bytes: bytes, filename: str) -> Analysis:
-    # Görüntüyü kaydet
-    image_path = os.path.join(UPLOAD_DIR, filename)
-    with open(image_path, "wb") as f:
-        f.write(image_bytes)
 
-    # AI analiz
+    # AI analizi önce yap (dosya kaydetmeden)
     result = radiology.analyze(image_bytes)
 
-    # Isı haritası oluştur ve kaydet
-    heatmap_path = None
+    # Geçici path ile insert et, flush ile ID al (commit yok henüz)
+    analysis = Analysis(
+        patient_id=patient_id,
+        doctor_id=doctor_id,
+        image_path="pending",   # NOT NULL geçici değer
+        heatmap_path=None,
+        result=result["result"],
+        confidence=result["confidence"],
+        is_bleeding=result["is_bleeding"],
+        status=AnalysisStatus.pending
+    )
+    db.add(analysis)
+    db.flush()   # ← commit etmez ama ID üretir
+    # artık analysis.id var
+
+    # Klasörü oluştur
+    analiz_dir = os.path.join(UPLOAD_DIR, f"analiz_{analysis.id}")
+    os.makedirs(analiz_dir, exist_ok=True)
+
+    # Görüntüyü kaydet
+    image_disk_path = os.path.join(analiz_dir, filename)
+    with open(image_disk_path, "wb") as f:
+        f.write(image_bytes)
+
+    # Isı haritası
+    heatmap_url = None
     try:
         np_arr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        if img is None:
+            raise ValueError("cv2.imdecode başarısız")
+
         img_resized = cv2.resize(img, (224, 224))
         img_norm = img_resized / 255.0
         img_input = np.reshape(img_norm, (1, 224, 224, 3))
@@ -36,30 +60,25 @@ def create_analysis(db: Session, patient_id: int, doctor_id: int, image_bytes: b
         heatmap = radiology._get_heatmap(img_input)
         if heatmap is not None:
             heatmap_filename = f"heatmap_{filename}"
-            heatmap_path = os.path.join(HEATMAP_DIR, heatmap_filename)
+            heatmap_disk_path = os.path.join(analiz_dir, heatmap_filename)
             heatmap_resized = cv2.resize(heatmap, (img.shape[1], img.shape[0]))
             heatmap_uint8 = np.uint8(255 * heatmap_resized)
             heatmap_colored = cv2.applyColorMap(heatmap_uint8, cv2.COLORMAP_JET)
             overlay = cv2.addWeighted(heatmap_colored, 0.4, img, 0.6, 0)
-            cv2.imwrite(heatmap_path, overlay)
-    except:
-        pass
+            cv2.imwrite(heatmap_disk_path, overlay)
+            heatmap_url = f"/uploads/analiz_{analysis.id}/{heatmap_filename}"
 
-    analysis = Analysis(
-        patient_id=patient_id,
-        doctor_id=doctor_id,
-        image_path=image_path,
-        heatmap_path=heatmap_path,
-        result=result["result"],
-        confidence=result["confidence"],
-        is_bleeding=result["is_bleeding"],
-        status=AnalysisStatus.pending
-    )
-    db.add(analysis)
+    except Exception as e:
+        print(f"HEATMAP HATA: {e}")
+        import traceback
+        traceback.print_exc()
+
+    # Gerçek path'leri güncelle ve commit et
+    analysis.image_path  = f"/uploads/analiz_{analysis.id}/{filename}"
+    analysis.heatmap_path = heatmap_url
     db.commit()
     db.refresh(analysis)
     return analysis
-
 
 def get_all_analyses(db: Session) -> list[Analysis]:
     return db.query(Analysis).order_by(Analysis.created_at.desc()).all()
