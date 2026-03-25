@@ -1,7 +1,7 @@
+import os
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from typing import Optional
 from app.core.rbac import require_permission
 from app.core.Security import get_current_user
 from app.db.DbContext import get_db
@@ -9,7 +9,11 @@ from app.models.User import User
 from app.schemas.analisy import ReviewCreate, AllAnalysisResponse
 from app.models.AnalisyModel import Analysis
 from app.services.analysis_service import (
-    create_analysis, get_all_analyses, get_analysis, add_review
+    create_analysis,
+    get_analysis,
+    add_review,
+    _resolve_upload_path,
+    delete_analysis,
 )
 
 router = APIRouter()
@@ -22,9 +26,9 @@ async def analyze_image(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not file.content_type.startswith("image/"):
+    if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400,
-        tail="Sadece resim dosyası yükleyebilirsiniz")
+        detail="Sadece resim dosyası yükleyebilirsiniz")
     image_bytes = await file.read()
     return create_analysis(db, patient_id, current_user.id, image_bytes, file.filename)
 
@@ -42,6 +46,7 @@ def get_analyses(db: Session = Depends(get_db)):
             "result": a.result,
             "confidence": a.confidence,
             "is_bleeding": a.is_bleeding,
+            "bleeding_type": a.bleeding_type,
             "status": a.status,
             
             "patient_name": a.patient.full_name if a.patient else "Bilinmiyor",
@@ -71,4 +76,13 @@ def get_heatmap(analysis_id: int, db: Session = Depends(get_db)):
     analysis = get_analysis(db, analysis_id)
     if not analysis.heatmap_path:
         raise HTTPException(status_code=404, detail="Isı haritası bulunamadı")
-    return FileResponse(analysis.heatmap_path, media_type="image/jpeg")
+    full_path = _resolve_upload_path(analysis.heatmap_path)
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="Heatmap dosyasi bulunamadi")
+    return FileResponse(full_path, media_type="image/jpeg")
+
+
+    
+@router.delete("/analyses/{analysis_id}", dependencies=[Depends(require_permission("analyze:delete"))])
+def delete_analysis_endpoint(analysis_id: int, db: Session = Depends(get_db)):
+    return delete_analysis(db, analysis_id)

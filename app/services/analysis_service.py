@@ -1,11 +1,13 @@
 import os
 import cv2
+import shutil
 import numpy as np
 import traceback
+from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models.AnalisyModel import Analysis, AnalysisReview, AnalysisStatus
-from app.schemas.analisy import ReviewCreate, AllAnalysisResponse
+from app.schemas.analisy import ReviewCreate
 from app.services.radiology_service import RadiologyService
 
 UPLOAD_DIR = r"C:\Users\LENOVO\Desktop\Projeler\AiMedicalSupport-Backend\uploads"
@@ -14,6 +16,27 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(HEATMAP_DIR, exist_ok=True)
 
 radiology = RadiologyService()
+
+
+def _resolve_upload_path(relative_path: str) -> str:
+    normalized = relative_path.replace("\\", "/").strip("/")
+    if normalized.lower().startswith("uploads/"):
+        normalized = normalized[len("uploads/"):]
+    candidate = os.path.abspath(os.path.join(UPLOAD_DIR, normalized.replace("/", os.sep)))
+    upload_root = os.path.abspath(UPLOAD_DIR)
+    if os.path.commonpath([candidate, upload_root]) != upload_root:
+        raise HTTPException(status_code=400, detail="Gecersiz dosya yolu.")
+    return candidate
+
+
+def _build_review_label(is_bleeding: bool, bleeding_type: Optional[str], label: Optional[str]) -> str:
+    if label:
+        return label
+    if not is_bleeding:
+        return "NORMAL"
+    if bleeding_type:
+        return f"KANAMA ({bleeding_type})"
+    return "KANAMA"
 
 
 def create_analysis(db: Session, patient_id: int, doctor_id: int, image_bytes: bytes, filename: str) -> Analysis:
@@ -30,6 +53,7 @@ def create_analysis(db: Session, patient_id: int, doctor_id: int, image_bytes: b
         result=result["result"],
         confidence=result["confidence"],
         is_bleeding=result["is_bleeding"],
+        bleeding_type=result.get("bleeding_type"),
         status=AnalysisStatus.pending
     )
     db.add(analysis)
@@ -70,7 +94,6 @@ def create_analysis(db: Session, patient_id: int, doctor_id: int, image_bytes: b
 
     except Exception as e:
         print(f"HEATMAP HATA: {e}")
-        import traceback
         traceback.print_exc()
 
     # Gerçek path'leri güncelle ve commit et
@@ -91,17 +114,65 @@ def get_analysis(db: Session, analysis_id: int) -> Analysis:
     return analysis
 
 
+
+def delete_analysis(db: Session, analysis_id: int):
+    analysis = get_analysis(db, analysis_id)
+    analiz_dir = os.path.join(UPLOAD_DIR, f"analiz_{analysis_id}")
+    if os.path.exists(analiz_dir):
+        shutil.rmtree(analiz_dir, ignore_errors=True)
+    db.delete(analysis)
+    db.commit()
+    return {"message": "Analiz silindi"}
+
+
 def add_review(db: Session, analysis_id: int, doctor_id: int, data: ReviewCreate) -> AnalysisReview:
     analysis = get_analysis(db, analysis_id)
+
+    review_label = _build_review_label(
+        is_bleeding=data.is_bleeding,
+        bleeding_type=data.bleeding_type.value if data.bleeding_type else None,
+        label=data.label
+    )
+
+    model_trained = False
+    image_disk_path = _resolve_upload_path(analysis.image_path)
+    if os.path.exists(image_disk_path):
+        with open(image_disk_path, "rb") as f:
+            image_bytes = f.read()
+        train_result = radiology.train(
+            image_bytes=image_bytes,
+            label=1 if data.is_bleeding else 0,
+            bleeding_type=data.bleeding_type.value if data.bleeding_type else None,
+            analysis_id=analysis_id,
+            doctor_id=doctor_id,
+        )
+        model_trained = bool(train_result.get("success", False))
+        if not model_trained:
+            print(
+                f"MODEL TRAIN FAILED analysis_id={analysis_id}: "
+                f"{train_result.get('message', 'unknown error')}"
+            )
+
     review = AnalysisReview(
         analysis_id=analysis_id,
         doctor_id=doctor_id,
-        label=data.label,
+        label=review_label,
+        is_bleeding=data.is_bleeding,
+        bleeding_type=data.bleeding_type.value if data.bleeding_type else None,
+        model_trained=model_trained,
         severity=data.severity,
         note=data.note
     )
     db.add(review)
-    analysis.status = AnalysisStatus.reviewed
+    analysis.is_bleeding = data.is_bleeding
+    analysis.bleeding_type = data.bleeding_type.value if data.bleeding_type else None
+    analysis.result = review_label
+    analysis.status = AnalysisStatus.trained if model_trained else AnalysisStatus.reviewed
     db.commit()
     db.refresh(review)
     return review
+
+
+
+
+

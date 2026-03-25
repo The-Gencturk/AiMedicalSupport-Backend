@@ -26,6 +26,8 @@ if config.config_file_name is not None:
 from app.db.DbContext import Base
 from app.models.User import User
 from app.models.rbac import Role, Permission, RolePermission, UserRole
+from app.models.patient import Patient
+from app.models.AnalisyModel import Analysis, AnalysisReview
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,

@@ -33,12 +33,19 @@ if getattr(sys, 'frozen', False):
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-MODEL_PATH = os.path.join(BASE_DIR, 'beyin_bt_modeli.h5')
+MODEL_PATH_KERAS = os.path.join(BASE_DIR, 'beyin_bt_modeli.keras')
+MODEL_PATH_H5 = os.path.join(BASE_DIR, 'beyin_bt_modeli.h5')
 WATCH_FOLDER = os.path.join(BASE_DIR, "Sectra_Export")
 RETRAIN_FOLDER = os.path.join(BASE_DIR, "Hatali_Veriler")
 
 if not os.path.exists(WATCH_FOLDER): os.makedirs(WATCH_FOLDER)
 if not os.path.exists(RETRAIN_FOLDER): os.makedirs(RETRAIN_FOLDER)
+
+
+def get_active_model_path():
+    if os.path.exists(MODEL_PATH_KERAS):
+        return MODEL_PATH_KERAS
+    return MODEL_PATH_H5
 
 # --- YARDIMCI FONKSİYONLAR ---
 def find_last_conv_layer(model):
@@ -136,16 +143,17 @@ def train_on_single_image(model, img_path, actual_label):
         model.fit(img, label, epochs=1, verbose=0)
         
         # Modeli geçici dosyaya kaydet
-        temp_path = os.path.join(BASE_DIR, "gecici_model.h5")
+        temp_path = os.path.join(BASE_DIR, "gecici_model.keras")
         if os.path.exists(temp_path): os.remove(temp_path)
         model.save(temp_path)
         
         # Asıl modelin üzerine yaz
-        if os.path.exists(MODEL_PATH):
-            try: os.remove(MODEL_PATH)
+        active_model_path = get_active_model_path()
+        if os.path.exists(active_model_path):
+            try: os.remove(active_model_path)
             except: pass # Silinemezse bile move overwrite edebilir
             
-        shutil.move(temp_path, MODEL_PATH)
+        shutil.move(temp_path, MODEL_PATH_KERAS)
         return True
         
     except Exception as e:
@@ -196,7 +204,8 @@ class BeyinAsistaniApp:
         self.root.after(1000, self.load_ai_model)
 
     def load_ai_model(self):
-        if not os.path.exists(MODEL_PATH):
+        active_model_path = get_active_model_path()
+        if not os.path.exists(active_model_path):
             self.status.config(text="Model Dosyası Bulunamadı!", bg="red")
             return
         
@@ -204,7 +213,7 @@ class BeyinAsistaniApp:
         self.root.update()
         
         try:
-            self.model = load_model(MODEL_PATH)
+            self.model = load_model(active_model_path)
             self.last_conv_layer = find_last_conv_layer(self.model)
             msg = "SİSTEM HAZIR"
             self.status.config(text=msg, bg="#20bf6b")

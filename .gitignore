@@ -5,6 +5,10 @@ __pycache__/
 
 # Büyük model dosyaları
 AiModels/beyin_bt_modeli.h5
+AiModels/beyin_bt_modeli.keras
+AiModels/backups/
+AiModels/feedback_dataset/
+AiModels/training_logs.jsonl
 UserProfile
 uploads
 # Ortam değişkenleri
