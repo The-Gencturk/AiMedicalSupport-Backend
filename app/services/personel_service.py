@@ -4,19 +4,27 @@ from app.schemas.personel import AllPersonelResponse, PersonelResponse , UserUpd
 from fastapi import HTTPException
 
 
-def get_all_personel(db: Session):
-    users = db.query(User).all()
-    result = []
-    for u in users:
-        data = AllPersonelResponse(
-            id=u.id,
-            full_name=u.full_name,
-            specialty=u.specialty,
-            is_active=u.is_active,
-        )
-        result.append(data)
-    return result
-
+def get_all_personel(db: Session, page: int, page_size: int):
+    offset = (page - 1) * page_size
+    total = db.query(User).count()
+    users = db.query(User).offset(offset).limit(page_size).all()
+    
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "data": [
+            AllPersonelResponse(
+                id=u.id,
+                full_name=u.full_name,
+                email=u.email,
+                roles=u.get_roles(),
+                specialty=u.specialty,
+                is_active=u.is_active
+            )
+            for u in users
+        ]
+    }
 
 def get_ById_personel(db: Session, user_id: int):
     user = db.query(User).filter(User.id == user_id).first()

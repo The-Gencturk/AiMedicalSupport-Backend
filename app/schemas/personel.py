@@ -8,6 +8,7 @@ class AllPersonelResponse(BaseModel):
     full_name: str
     specialty: Optional[str]
     is_active: bool
+    email: str
     
     class Config:
         from_attributes = True
@@ -18,7 +19,7 @@ class PersonelResponse(BaseModel):
     id: int
     full_name: str
     email: str
-    person_profile: str
+    profile: Optional[str] = None 
     specialty: Optional[str]
     is_active: bool
     roles: List[str] = []

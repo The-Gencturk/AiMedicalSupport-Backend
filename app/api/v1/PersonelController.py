@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends,Query
 from sqlalchemy.orm import Session
 from app.core.rbac import require_role, require_permission
 from app.core.Security import get_current_user
@@ -10,8 +10,9 @@ router = APIRouter()
 
 
 @router.get("/GetAllPersonel", dependencies=[Depends(require_permission("user:read"))])
-def getall_personel(db: Session = Depends(get_db)):
-    return get_all_personel(db)
+def getall_personel(db: Session = Depends(get_db),    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100)):
+    return get_all_personel(db, page, page_size)
 
 
 @router.get("/GetByIdPersonel/{user_id}", dependencies=[Depends(require_permission("user:detread"))])

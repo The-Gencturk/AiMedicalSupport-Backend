@@ -5,6 +5,7 @@ __pycache__/
 
 # Büyük model dosyaları
 AiModels/beyin_bt_modeli.h5
-
+UserProfile
+uploads
 # Ortam değişkenleri
 .env

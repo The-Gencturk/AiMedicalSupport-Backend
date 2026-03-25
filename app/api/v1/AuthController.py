@@ -59,7 +59,8 @@ def get_me(current_user: User = Depends(get_current_user)):
         "specialty": current_user.specialty,
         "UserProfile":current_user.profile,
         "is_active": current_user.is_active,
-        "roles": current_user.get_roles()
+        "roles": current_user.get_roles(),
+        "created_at" : current_user.created_at
     }
 
 

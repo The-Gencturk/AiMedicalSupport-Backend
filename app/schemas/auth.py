@@ -40,6 +40,7 @@ class MeResponse(BaseModel):
     specialty: Optional[str]
     is_active: bool
     profile: str
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -52,8 +53,8 @@ class UserFullResponse(BaseModel):
     specialty: Optional[str]
     is_active: bool
     created_at: datetime
-
-
+    roles: List[str] = []
+    
     class Config:
         from_attributes = True
 

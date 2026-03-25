@@ -12,12 +12,13 @@ class Severity(str, Enum):
 
 class AllAnalysisResponse(BaseModel):
     id: int
-    patient_id: int
-    doctor_id: Optional[int]
     result: str
     confidence: float
     is_bleeding: bool
     status: str
+
+    patient_name: str
+    doctor_name: str
 
     class Config:
         from_attributes = True
