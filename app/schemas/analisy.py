@@ -17,7 +17,7 @@ class BleedingType(str, Enum):
     subarachnoid = "subaraknoid"
     intraparenchymal = "intraparenkimal"
     intraventricular = "intraventrikuler"
-    other = "diger"
+    diger = "diger"
 
 
 class AllAnalysisResponse(BaseModel):
@@ -57,23 +57,40 @@ class ReviewCreate(BaseModel):
     severity: Optional[Severity] = Severity.none
     note: Optional[str] = None
 
-    @model_validator(mode="after")
-    def validate_bleeding_type(self):
-        if self.is_bleeding is None and self.label:
-            label_text = self.label.lower()
-            if "kanama" in label_text and "yok" not in label_text:
-                self.is_bleeding = True
-            elif "normal" in label_text or "kanama yok" in label_text:
-                self.is_bleeding = False
+    @model_validator(mode="before")  
+    @classmethod
+    def validate_bleeding_type(cls, data: dict):
+        # 1. Ham veriden değerleri alalım
+        is_bleeding = data.get("is_bleeding")
+        b_type = data.get("bleeding_type")
+        label = data.get("label")
 
-        if self.is_bleeding is None:
+        # 2. Eğer frontend "none" stringi gönderdiyse onu Python None (null) yap
+        if b_type == "none":
+            data["bleeding_type"] = None
+            b_type = None
+
+        # 3. Senin yazdığın label mantığı
+        if is_bleeding is None and label:
+            label_text = label.lower()
+            if "kanama" in label_text and "yok" not in label_text:
+                is_bleeding = True
+            elif "normal" in label_text or "kanama yok" in label_text:
+                is_bleeding = False
+            data["is_bleeding"] = is_bleeding
+
+        # 4. Zorunluluk kontrolleri
+        if is_bleeding is None:
             raise ValueError("is_bleeding zorunludur.")
 
-        if self.is_bleeding and self.bleeding_type is None:
-            raise ValueError("Kanama secildiginde bleeding_type zorunludur.")
-        if not self.is_bleeding:
-            self.bleeding_type = None
-        return self
+        if is_bleeding and b_type is None:
+            raise ValueError("Kanama seçildiğinde bleeding_type zorunludur.")
+        
+        if not is_bleeding:
+            data["bleeding_type"] = None
+            data["severity"] = "none" # Severity Enum'unda 'none' var, sorun olmaz
+
+        return data
 
 class ReviewResponse(BaseModel):
     id: int

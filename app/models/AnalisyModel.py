@@ -19,7 +19,7 @@ class Analysis(Base):
     __tablename__ = "analyses"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=False)
+    patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=True)
     doctor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     image_path = Column(String, nullable=False)
     heatmap_path = Column(String, nullable=True)

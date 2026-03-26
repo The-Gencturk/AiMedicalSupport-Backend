@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.rbac import require_permission
 from app.core.Security import get_current_user
 from app.db.DbContext import get_db
+from typing import Optional
 from app.models.User import User
 from app.schemas.analisy import ReviewCreate, AllAnalysisResponse
 from app.models.AnalisyModel import Analysis
@@ -21,7 +22,7 @@ router = APIRouter()
 
 @router.post("/analyzeCreate", dependencies=[Depends(require_permission("analyze:create"))])
 async def analyze_image(
-    patient_id: int,
+    patient_id: Optional[int] = None,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)

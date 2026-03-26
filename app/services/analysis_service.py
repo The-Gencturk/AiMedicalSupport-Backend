@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models.AnalisyModel import Analysis, AnalysisReview, AnalysisStatus
-from app.schemas.analisy import ReviewCreate
+from app.schemas.analisy import ReviewCreate,Severity
 from app.services.radiology_service import RadiologyService
 
 UPLOAD_DIR = r"C:\Users\LENOVO\Desktop\Projeler\AiMedicalSupport-Backend\uploads"
@@ -113,8 +113,6 @@ def get_analysis(db: Session, analysis_id: int) -> Analysis:
         raise HTTPException(status_code=404, detail="Analiz bulunamadı")
     return analysis
 
-
-
 def delete_analysis(db: Session, analysis_id: int):
     analysis = get_analysis(db, analysis_id)
     analiz_dir = os.path.join(UPLOAD_DIR, f"analiz_{analysis_id}")
@@ -125,54 +123,70 @@ def delete_analysis(db: Session, analysis_id: int):
     return {"message": "Analiz silindi"}
 
 
+
 def add_review(db: Session, analysis_id: int, doctor_id: int, data: ReviewCreate) -> AnalysisReview:
     analysis = get_analysis(db, analysis_id)
 
+    # 1. MANTIK KONTROLÜ VE TEMİZLEME
+    if not data.is_bleeding:
+        # Kanama yoksa her şeyi sıfırla
+        final_bleeding_type = None
+        final_severity = Severity.none
+    else:
+        # Kanama varsa verileri al ve doğrula
+        final_bleeding_type = data.bleeding_type.value if data.bleeding_type else None
+        final_severity = data.severity
+        
+        # Kritik: Kanama varken tür seçilmemişse hata fırlat
+        if not final_bleeding_type:
+            raise HTTPException(status_code=400, detail="Kanama durumunda tür belirtilmelidir.")
+
+    # 2. LABEL OLUŞTURMA (Temizlenmiş veriyle)
     review_label = _build_review_label(
         is_bleeding=data.is_bleeding,
-        bleeding_type=data.bleeding_type.value if data.bleeding_type else None,
+        bleeding_type=final_bleeding_type,
         label=data.label
     )
 
     model_trained = False
     image_disk_path = _resolve_upload_path(analysis.image_path)
+    
     if os.path.exists(image_disk_path):
         with open(image_disk_path, "rb") as f:
             image_bytes = f.read()
+        
+        # 3. MODEL EĞİTİMİ (Temizlenmiş final_bleeding_type kullanıyoruz)
         train_result = radiology.train(
             image_bytes=image_bytes,
             label=1 if data.is_bleeding else 0,
-            bleeding_type=data.bleeding_type.value if data.bleeding_type else None,
+            bleeding_type=final_bleeding_type, 
             analysis_id=analysis_id,
             doctor_id=doctor_id,
         )
         model_trained = bool(train_result.get("success", False))
         if not model_trained:
-            print(
-                f"MODEL TRAIN FAILED analysis_id={analysis_id}: "
-                f"{train_result.get('message', 'unknown error')}"
-            )
+            print(f"MODEL TRAIN FAILED id={analysis_id}: {train_result.get('message')}")
 
+    # 4. VERİTABANI KAYDI (Burada 'data' değil, 'final' değişkenleri kullanmalısın!)
     review = AnalysisReview(
         analysis_id=analysis_id,
         doctor_id=doctor_id,
         label=review_label,
         is_bleeding=data.is_bleeding,
-        bleeding_type=data.bleeding_type.value if data.bleeding_type else None,
+        bleeding_type=final_bleeding_type, # ÖNEMLİ: Temiz veri
         model_trained=model_trained,
-        severity=data.severity,
+        severity=final_severity,           # ÖNEMLİ: Temiz veri
         note=data.note
     )
+    
     db.add(review)
+    
+    # Ana analiz kaydını güncelle
     analysis.is_bleeding = data.is_bleeding
-    analysis.bleeding_type = data.bleeding_type.value if data.bleeding_type else None
+    analysis.bleeding_type = final_bleeding_type # ÖNEMLİ: Temiz veri
     analysis.result = review_label
     analysis.status = AnalysisStatus.trained if model_trained else AnalysisStatus.reviewed
+    
     db.commit()
     db.refresh(review)
     return review
-
-
-
-
-

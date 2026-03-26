@@ -24,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from app.models.AnalisyModel import Analysis, AnalysisReview
 from app.api.v1.PatientController import router as patient_router
 from app.db.DbContext import Base, engine
+from pathlib import Path
 
 
 Base.metadata.create_all(bind=engine)
@@ -43,8 +44,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/uploads", StaticFiles(directory=r"C:\Users\LENOVO\Desktop\Projeler\AiMedicalSupport-Backend\uploads"), name="uploads")
-app.mount("/wwwroot/UserProfile", StaticFiles(directory="wwwroot/UserProfile"), name="profile")
+BASE_DIR = Path(__file__).resolve().parent
+UPLOADS_DIR = BASE_DIR / "uploads"
+PROFILE_DIR = BASE_DIR / "wwwroot" / "UserProfile"
+
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+app.mount("/wwwroot/UserProfile", StaticFiles(directory=str(PROFILE_DIR)), name="profile")
 app.include_router(personel_router,prefix="/api/v1/personel", tags=["Personel"])
 app.include_router(patient_router, prefix="/api/v1/Patient", tags=["Patient"])
 app.include_router(analysis_router, prefix="/api/v1", tags=["Analysis"])
