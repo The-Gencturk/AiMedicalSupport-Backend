@@ -12,5 +12,6 @@ AiModels/training_logs.jsonl
 UserProfile
 feedback_dataset
 uploads
+AiModels/*.h5
 # Ortam değişkenleri
 .env
