@@ -10,6 +10,7 @@ AiModels/backups/
 AiModels/feedback_dataset/
 AiModels/training_logs.jsonl
 UserProfile
+feedback_dataset
 uploads
 # Ortam değişkenleri
 .env

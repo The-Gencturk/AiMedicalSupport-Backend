@@ -62,7 +62,7 @@ def update_me_user(db: Session, user: User, data: UpdateMe):
         user.full_name = data.full_name
 
     if data.specialty is not None:
-        user.specialty = data.specialty
+        user.specialty = data.specialty 
 
     if data.profile is not None:
         user.profile = data.profile
@@ -94,7 +94,6 @@ def login_user(db: Session, email: str, password: str) -> dict:
 
 
 def update_profile_photo(db, user, file):
-    # 1. Klasörün varlığından emin ol (Yoksa oluştur)
     upload_dir = "wwwroot/UserProfile"
     if not os.path.exists(upload_dir):
         os.makedirs(upload_dir, exist_ok=True)

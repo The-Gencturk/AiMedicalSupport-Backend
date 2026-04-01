@@ -15,6 +15,8 @@ class Severity(str, enum.Enum):
     moderate = "orta"
     severe = "ciddi"
 
+
+
 class Analysis(Base):
     __tablename__ = "analyses"
 
@@ -30,6 +32,7 @@ class Analysis(Base):
     status = Column(Enum(AnalysisStatus), default=AnalysisStatus.pending)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    scan_type = Column(String, default="brain", nullable=False)  # Enum değil String
 
     patient = relationship("Patient", back_populates="analyses")
     doctor = relationship("User", foreign_keys=[doctor_id])

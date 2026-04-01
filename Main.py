@@ -22,23 +22,23 @@ from app.models.User import User
 from app.models.patient import Patient
 from fastapi.staticfiles import StaticFiles
 from app.models.AnalisyModel import Analysis, AnalysisReview
+from app.models.OrganModel import OrganModel                          # ← YENİ
 from app.api.v1.PatientController import router as patient_router
-from app.db.DbContext import Base, engine
+from app.db.DbContext import Base, engine, SessionLocal               # ← SessionLocal ekle
+from app.services.classification_service import ClassificationService # ← YENİ
 from pathlib import Path
-
 
 Base.metadata.create_all(bind=engine)
 
-
 app = FastAPI(
     title="AiMedicalSupport API",
-    description="AI-powered brain radiology image analysis API",
-    version="1.0.0"
+    description="AI-powered medical radiology image analysis API",
+    version="2.0.0"
 )
 
 app.add_middleware(
     CORSMiddleware,
-     allow_origins=["http://127.0.0.1:5500", "http://localhost:5500"], 
+    allow_origins=["http://127.0.0.1:5500", "http://localhost:5500"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,11 +53,26 @@ PROFILE_DIR.mkdir(parents=True, exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 app.mount("/wwwroot/UserProfile", StaticFiles(directory=str(PROFILE_DIR)), name="profile")
-app.include_router(personel_router,prefix="/api/v1/personel", tags=["Personel"])
-app.include_router(patient_router, prefix="/api/v1/Patient", tags=["Patient"])
-app.include_router(analysis_router, prefix="/api/v1", tags=["Analysis"])
-app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
-app.include_router(role_router, prefix="/api/v1/Role", tags=["Role"])
+
+# ── Startup ──────────────────────────────────────────────────────────────────
+@app.on_event("startup")
+def startup_event():
+    db = SessionLocal()
+    try:
+        classification = ClassificationService()
+        classification.load_from_db(db)
+        print("[Startup] Organ modelleri yüklendi.")
+    except Exception as e:
+        print(f"[Startup] Model yükleme hatası: {e}")
+    finally:
+        db.close()
+# ─────────────────────────────────────────────────────────────────────────────
+
+app.include_router(personel_router, prefix="/api/v1/personel", tags=["Personel"])
+app.include_router(patient_router,  prefix="/api/v1/Patient",  tags=["Patient"])
+app.include_router(analysis_router, prefix="/api/v1",          tags=["Analysis"])
+app.include_router(auth_router,     prefix="/api/v1/auth",     tags=["Auth"])
+app.include_router(role_router,     prefix="/api/v1/Role",     tags=["Role"])
 
 if __name__ == "__main__":
     import uvicorn

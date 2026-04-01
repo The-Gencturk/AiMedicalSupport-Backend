@@ -1,6 +1,23 @@
 from app.models.User import User
 from app.db.DbContext import SessionLocal
 from app.models.rbac import Role, Permission, RolePermission
+from app.models.OrganModel import OrganModel 
+
+def seed_organs(db):
+    existing = db.query(OrganModel).first()
+    if existing:
+        print("Organlar zaten mevcut, atlandı.")
+        return
+
+    organs = [
+        OrganModel(name="brain",   display_name="Beyin",   model_path="AiModels/Brain/beyin_bt_modeli.keras", is_active=True),
+        OrganModel(name="lung",    display_name="Akciğer", model_path=None, is_active=False),
+        OrganModel(name="bone",    display_name="Kemik",   model_path=None, is_active=False),
+        OrganModel(name="abdomen", display_name="Karın",   model_path=None, is_active=False),
+    ]
+    db.add_all(organs)
+    db.flush()
+    print("Organlar eklendi.")
 
 def seed():
     db = SessionLocal()
@@ -46,7 +63,7 @@ def seed():
             "Doktor": ["analyze:create","analyze:read","patient:read","patient:detread"],
             "Radyolog": ["analyze:create","analyze:read","analyze:delete","patient:read","patient:detread"],
             "stajer": ["analyze:read","patient:read"],
-            "Hasta": ["analyze:read","analyze:create",],
+            "Hasta": ["analyze:read","analyze:create"],
         }
 
         for role_name, perm_names in roles_data.items():
@@ -66,6 +83,9 @@ def seed():
 
         db.commit()
         print("Roller ve yetkiler başarıyla oluşturuldu")
+
+        seed_organs(db)  # ← organları ekle
+        db.commit()
 
     except Exception as e:
         db.rollback()

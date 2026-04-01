@@ -8,15 +8,14 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models.AnalisyModel import Analysis, AnalysisReview, AnalysisStatus
 from app.schemas.analisy import ReviewCreate,Severity
-from app.services.radiology_service import RadiologyService
+from app.services.classification_service import ClassificationService
 
 UPLOAD_DIR = r"C:\Users\LENOVO\Desktop\Projeler\AiMedicalSupport-Backend\uploads"
 HEATMAP_DIR = r"C:\Users\LENOVO\Desktop\Projeler\AiMedicalSupport-Backend\uploads\heatmaps"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(HEATMAP_DIR, exist_ok=True)
 
-radiology = RadiologyService()
-
+classification = ClassificationService()
 
 def _resolve_upload_path(relative_path: str) -> str:
     normalized = relative_path.replace("\\", "/").strip("/")
@@ -39,8 +38,9 @@ def _build_review_label(is_bleeding: bool, bleeding_type: Optional[str], label: 
     return "KANAMA"
 
 
-def create_analysis(db: Session, patient_id: int, doctor_id: int, image_bytes: bytes, filename: str) -> Analysis:
+def create_analysis(db: Session, patient_id: int, doctor_id: int, image_bytes: bytes, filename: str,scan_type: str = "brain" ) -> Analysis:
 
+    radiology = classification.get_service(scan_type)
     # AI analizi önce yap (dosya kaydetmeden)
     result = radiology.analyze(image_bytes)
 
@@ -126,7 +126,7 @@ def delete_analysis(db: Session, analysis_id: int):
 
 def add_review(db: Session, analysis_id: int, doctor_id: int, data: ReviewCreate) -> AnalysisReview:
     analysis = get_analysis(db, analysis_id)
-
+    radiology = classification.get_service(analysis.scan_type or "brain")
     # 1. MANTIK KONTROLÜ VE TEMİZLEME
     if not data.is_bleeding:
         # Kanama yoksa her şeyi sıfırla
