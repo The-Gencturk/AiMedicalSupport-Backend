@@ -78,7 +78,7 @@ app.include_router(patient_router,  prefix="/api/v1/Patient",  tags=["Patient"])
 app.include_router(analysis_router, prefix="/api/v1",          tags=["Analysis"])
 app.include_router(auth_router,     prefix="/api/v1/auth",     tags=["Auth"])
 app.include_router(role_router,     prefix="/api/v1/Role",     tags=["Role"])
-app.include_router(organ_router, prefix="/api/v1/Organ", tags=["Organ"])
+app.include_router(organ_router, prefix="/api/v1/Organ", tags=["AiModel"])
 
 if __name__ == "__main__":
     import uvicorn

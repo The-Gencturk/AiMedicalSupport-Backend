@@ -62,6 +62,28 @@ class ClassificationService:
         """Organ deaktif edilince bellekten kaldır."""
         self._services.pop(organ_name, None)
 
+
+ 
+    def predict_scan_type(self, image_bytes: bytes) -> dict:
+    active_types = self.supported_types
+    
+    if len(active_types) == 1:
+        # Sadece bir organ aktifse direkt onu öner
+        return {
+            "suggested_scan_type": active_types[0],
+            "confidence": 100,
+            "auto_detected": False,
+            "message": f"Sistemde sadece {active_types[0]} aktif."
+        }
+    
+    return {
+        "suggested_scan_type": None,
+        "confidence": None,
+        "auto_detected": False,
+        "message": "Lütfen organ türünü manuel seçin.",
+        "available_types": active_types
+    }
+
     @property
     def supported_types(self) -> list[str]:
         return list(self._services.keys())

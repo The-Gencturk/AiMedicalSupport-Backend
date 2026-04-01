@@ -96,3 +96,19 @@ def toggle_organ(organ_id: int, db: Session = Depends(get_db)):
         classification.remove_organ(organ.name)
 
     return {"message": f"{organ.display_name} {'aktif' if organ.is_active else 'deaktif'} edildi."}
+
+
+
+@router.post("/analyzePredict")
+async def predict_scan_type(
+    file: UploadFile = File(...),
+):
+    image_bytes = await file.read()
+    
+    # Şimdilik basit kural tabanlı — ileride classifier model eklenebilir
+    # Görüntü boyutu, metadata veya basit renk analizi ile tahmin
+    return {
+        "suggested_scan_type": "brain",
+        "confidence": None,
+        "message": "Otomatik tespit yapılamadı, lütfen manuel seçin"
+    }
