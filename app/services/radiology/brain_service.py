@@ -18,7 +18,7 @@ from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.optimizers import Adam
 from app.services.radiology.base_radiology import BaseRadiologyService
 
-BASE_DIR = Path(__file__).resolve().parents[4]
+BASE_DIR = Path(__file__).resolve().parents[3]
 AI_MODELS_DIR = BASE_DIR / "AiModels" / "Brain"
 MODEL_PATH_KERAS = AI_MODELS_DIR / "beyin_bt_modeli.keras"
 MODEL_PATH_H5 = AI_MODELS_DIR / "beyin_bt_modeli.h5"

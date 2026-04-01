@@ -15,7 +15,7 @@ HEATMAP_DIR = r"C:\Users\LENOVO\Desktop\Projeler\AiMedicalSupport-Backend\upload
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(HEATMAP_DIR, exist_ok=True)
 
-classification = ClassificationService()
+
 
 def _resolve_upload_path(relative_path: str) -> str:
     normalized = relative_path.replace("\\", "/").strip("/")
@@ -40,7 +40,7 @@ def _build_review_label(is_bleeding: bool, bleeding_type: Optional[str], label: 
 
 def create_analysis(db: Session, patient_id: int, doctor_id: int, image_bytes: bytes, filename: str,scan_type: str = "brain" ) -> Analysis:
 
-    radiology = classification.get_service(scan_type)
+    radiology = ClassificationService().get_service(scan_type) 
     # AI analizi önce yap (dosya kaydetmeden)
     result = radiology.analyze(image_bytes)
 
@@ -57,8 +57,7 @@ def create_analysis(db: Session, patient_id: int, doctor_id: int, image_bytes: b
         status=AnalysisStatus.pending
     )
     db.add(analysis)
-    db.flush()   # ← commit etmez ama ID üretir
-    # artık analysis.id var
+    db.flush()   
 
     # Klasörü oluştur
     analiz_dir = os.path.join(UPLOAD_DIR, f"analiz_{analysis.id}")
@@ -126,7 +125,7 @@ def delete_analysis(db: Session, analysis_id: int):
 
 def add_review(db: Session, analysis_id: int, doctor_id: int, data: ReviewCreate) -> AnalysisReview:
     analysis = get_analysis(db, analysis_id)
-    radiology = classification.get_service(analysis.scan_type or "brain")
+    radiology = ClassificationService().get_service(analysis.scan_type or "brain")
     # 1. MANTIK KONTROLÜ VE TEMİZLEME
     if not data.is_bleeding:
         # Kanama yoksa her şeyi sıfırla

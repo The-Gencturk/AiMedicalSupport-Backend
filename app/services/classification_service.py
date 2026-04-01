@@ -1,4 +1,5 @@
 from pathlib import Path
+import traceback
 from sqlalchemy.orm import Session
 from app.services.radiology.base_radiology import BaseRadiologyService
 from app.services.radiology.brain_service import BrainRadiologyService
@@ -18,19 +19,15 @@ class ClassificationService:
         return cls._instance
 
     def load_from_db(self, db: Session):
-        """Uygulama başlarken ve yeni organ eklenince çağrılır."""
         organs = db.query(OrganModel).filter_by(is_active=True).all()
         for organ in organs:
             if organ.name in self._services:
-                continue  # zaten yüklü
-
+                continue
             try:
-                model_path = str(BASE_DIR / organ.model_path)
-
-                # Beyin için özel service (training + type detection destekli)
                 if organ.name == "brain":
                     self._services["brain"] = BrainRadiologyService()
                 else:
+                    model_path = str(BASE_DIR / organ.model_path)
                     self._services[organ.name] = GenericRadiologyService(
                         model_path=model_path,
                         organ_name=organ.name,
@@ -38,6 +35,7 @@ class ClassificationService:
                 print(f"[ClassificationService] Yüklendi: {organ.name}")
             except Exception as e:
                 print(f"[ClassificationService] HATA {organ.name}: {e}")
+                traceback.print_exc()
 
     def get_service(self, scan_type: str) -> BaseRadiologyService:
         service = self._services.get(scan_type)

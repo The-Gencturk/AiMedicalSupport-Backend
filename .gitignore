@@ -4,15 +4,14 @@ __pycache__/
 .venv/
 
 # Büyük model dosyaları
-AiModels/beyin_bt_modeli.h5
-AiModels/beyin_bt_modeli.keras
+beyin_bt_modeli.h5
+beyin_bt_modeli.keras
 AiModels/backups/
 AiModels/feedback_dataset/
 AiModels/training_logs.jsonl
 UserProfile
 feedback_dataset
+
 uploads
-AiModels/*.h5
-AiModels/*.keras
 # Ortam değişkenleri
 .env

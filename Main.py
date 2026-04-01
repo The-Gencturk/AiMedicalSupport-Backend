@@ -22,11 +22,12 @@ from app.models.User import User
 from app.models.patient import Patient
 from fastapi.staticfiles import StaticFiles
 from app.models.AnalisyModel import Analysis, AnalysisReview
-from app.models.OrganModel import OrganModel                          # ← YENİ
+from app.models.OrganModel import OrganModel                       
 from app.api.v1.PatientController import router as patient_router
-from app.db.DbContext import Base, engine, SessionLocal               # ← SessionLocal ekle
-from app.services.classification_service import ClassificationService # ← YENİ
+from app.db.DbContext import Base, engine, SessionLocal               
+from app.services.classification_service import ClassificationService 
 from pathlib import Path
+from app.api.v1.OrganController import router as organ_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -60,10 +61,14 @@ def startup_event():
     db = SessionLocal()
     try:
         classification = ClassificationService()
+        print(f"[Startup] Servisler öncesi: {classification.supported_types}")
         classification.load_from_db(db)
+        print(f"[Startup] Servisler sonrası: {classification.supported_types}")
         print("[Startup] Organ modelleri yüklendi.")
     except Exception as e:
-        print(f"[Startup] Model yükleme hatası: {e}")
+        import traceback
+        print(f"[Startup] HATA: {e}")
+        traceback.print_exc()
     finally:
         db.close()
 # ─────────────────────────────────────────────────────────────────────────────
@@ -73,6 +78,7 @@ app.include_router(patient_router,  prefix="/api/v1/Patient",  tags=["Patient"])
 app.include_router(analysis_router, prefix="/api/v1",          tags=["Analysis"])
 app.include_router(auth_router,     prefix="/api/v1/auth",     tags=["Auth"])
 app.include_router(role_router,     prefix="/api/v1/Role",     tags=["Role"])
+app.include_router(organ_router, prefix="/api/v1/Organ", tags=["Organ"])
 
 if __name__ == "__main__":
     import uvicorn
