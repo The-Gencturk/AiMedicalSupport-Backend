@@ -98,17 +98,34 @@ def toggle_organ(organ_id: int, db: Session = Depends(get_db)):
     return {"message": f"{organ.display_name} {'aktif' if organ.is_active else 'deaktif'} edildi."}
 
 
+@router.delete("/DeleteModel/{organ_id}")
+async def delete_organ_model(
+    organ_id: int,
+    db: Session = Depends(get_db),
+):
+    organ = db.query(OrganModel).filter(OrganModel.id == organ_id).first()
+    if not organ:
+        raise HTTPException(status_code=404, detail="Organ bulunamadı.")
+
+    if organ.model_path:
+        model_path = BASE_DIR / organ.model_path
+        if model_path.exists():
+            model_path.unlink()
+
+    db.delete(organ)
+    db.commit()
+
+    return {"message": f"{organ.display_name} modeli başarıyla silindi."}
+
+
 
 @router.post("/analyzePredict")
 async def predict_scan_type(
     file: UploadFile = File(...),
 ):
     image_bytes = await file.read()
-    
-    # Şimdilik basit kural tabanlı — ileride classifier model eklenebilir
-    # Görüntü boyutu, metadata veya basit renk analizi ile tahmin
+    result = ClassificationService().predict_scan_type(image_bytes)  
     return {
-        "suggested_scan_type": "brain",
-        "confidence": None,
-        "message": "Otomatik tespit yapılamadı, lütfen manuel seçin"
+        "success": True,
+        "data": result
     }

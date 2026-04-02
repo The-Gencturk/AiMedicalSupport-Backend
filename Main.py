@@ -63,6 +63,7 @@ def startup_event():
         classification = ClassificationService()
         print(f"[Startup] Servisler öncesi: {classification.supported_types}")
         classification.load_from_db(db)
+        classification.load_classifier() 
         print(f"[Startup] Servisler sonrası: {classification.supported_types}")
         print("[Startup] Organ modelleri yüklendi.")
     except Exception as e:

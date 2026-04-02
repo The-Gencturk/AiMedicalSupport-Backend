@@ -11,7 +11,8 @@ AiModels/feedback_dataset/
 AiModels/training_logs.jsonl
 UserProfile
 feedback_dataset
-
+dataset/
+classifier.keras
 uploads
 # Ortam değişkenleri
 .env
