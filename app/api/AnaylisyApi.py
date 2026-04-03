@@ -25,7 +25,7 @@ router = APIRouter()
 async def analyze_image(
     patient_id: Optional[int] = None,
     file: UploadFile = File(...),
-    scan_type: str = "beyin",  
+    scan_type: str = "brain",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -33,7 +33,7 @@ async def analyze_image(
         raise HTTPException(status_code=400,
         detail="Sadece resim dosyası yükleyebilirsiniz")
     image_bytes = await file.read()
-    return create_analysis(db, patient_id, current_user.id, image_bytes, file.filename, ClassificationService().predict_scan_type(image_bytes))
+    return create_analysis(db, patient_id, current_user.id, image_bytes, file.filename, scan_type)
 
 
 @router.get("/analyses", response_model=list[AllAnalysisResponse])

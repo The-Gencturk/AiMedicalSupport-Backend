@@ -1,9 +1,11 @@
+# app/services/radiology/generic_service.py
 import threading
 from pathlib import Path
 from typing import Optional
 import cv2
 import numpy as np
 import os
+import json
 
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
@@ -29,6 +31,15 @@ class GenericRadiologyService(BaseRadiologyService):
             metrics=["accuracy"],
         )
         self.last_conv_layer = self._find_last_conv_layer()
+        
+        # class_indices.json varsa yükle
+        model_dir = Path(model_path).parent
+        indices_path = model_dir / f"{organ_name}_class_indices.json"
+        self._class_indices = None
+        if indices_path.exists():
+            with open(indices_path) as f:
+                raw = json.load(f)
+                self._class_indices = {v: k for k, v in raw.items()}
 
     def _find_last_conv_layer(self) -> Optional[str]:
         for layer in reversed(self.model.layers):
@@ -55,16 +66,26 @@ class GenericRadiologyService(BaseRadiologyService):
         with self._model_lock:
             pred = float(self.model.predict(img_input, verbose=0)[0][0])
 
-        has_finding = pred > FINDING_THRESHOLD
-        confidence = int(pred * 100) if has_finding else int((1 - pred) * 100)
-        result_label = "ANOMALİ TESPİT EDİLDİ" if has_finding else "NORMAL"
+        # class_indices'e göre yorumla
+        if self._class_indices:
+            # 0 → cancer, 1 → normal (akciğer için)
+            predicted_idx = 0 if pred < FINDING_THRESHOLD else 1
+            predicted_label = self._class_indices.get(predicted_idx, "unknown")
+            has_finding = predicted_label != "normal"
+            confidence = int((1 - pred) * 100) if has_finding else int(pred * 100)
+            result_label = predicted_label.upper() if has_finding else "NORMAL"
+        else:
+            has_finding = pred > FINDING_THRESHOLD
+            confidence = int(pred * 100) if has_finding else int((1 - pred) * 100)
+            result_label = "ANOMALİ TESPİT EDİLDİ" if has_finding else "NORMAL"
 
         return {
             "result": result_label,
             "confidence": confidence,
             "finding": has_finding,
-            "finding_type": None,        # ileri versiyonda doldurulacak
-            "finding_type_confidence": None,
+            "finding_type": None,
+            "is_bleeding": False,
+            "bleeding_type": None,
         }
 
     def _get_heatmap(self, img_input: np.ndarray) -> Optional[np.ndarray]:
@@ -86,7 +107,7 @@ class GenericRadiologyService(BaseRadiologyService):
 
                 grads = tape.gradient(class_channel, conv_outputs)
                 if grads is None:
-                    return None
+                    return None 
 
                 pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
                 heatmap = conv_outputs[0] @ pooled_grads[..., tf.newaxis]
@@ -100,5 +121,4 @@ class GenericRadiologyService(BaseRadiologyService):
             return None
 
     def train(self, image_bytes: bytes, label: int, **kwargs) -> dict:
-        # İleri versiyonda organ bazlı training eklenecek
         return {"success": False, "message": "Bu organ için training henüz desteklenmiyor."}

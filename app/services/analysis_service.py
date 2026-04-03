@@ -54,7 +54,8 @@ def create_analysis(db: Session, patient_id: int, doctor_id: int, image_bytes: b
         confidence=result["confidence"],
         is_bleeding=result["is_bleeding"],
         bleeding_type=result.get("bleeding_type"),
-        status=AnalysisStatus.pending
+        status=AnalysisStatus.pending,
+        scan_type=scan_type
     )
     db.add(analysis)
     db.flush()   

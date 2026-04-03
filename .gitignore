@@ -7,6 +7,8 @@ __pycache__/
 beyin_bt_modeli.h5
 beyin_bt_modeli.keras
 AiModels/backups/
+AiModels/Lung/
+lung_model.h5
 AiModels/feedback_dataset/
 AiModels/training_logs.jsonl
 UserProfile
@@ -14,5 +16,7 @@ feedback_dataset
 dataset/
 classifier.keras
 uploads
+
+
 # Ortam değişkenleri
 .env
