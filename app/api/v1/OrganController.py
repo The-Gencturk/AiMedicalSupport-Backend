@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
+import time
 from app.db.DbContext import get_db
 from app.models.OrganModel import OrganModel
 from app.services.classification_service import ClassificationService
@@ -123,9 +124,14 @@ async def delete_organ_model(
 async def predict_scan_type(
     file: UploadFile = File(...),
 ):
+    start_time = time.time()
+
     image_bytes = await file.read()
-    result = ClassificationService().predict_scan_type(image_bytes)  
+    result = ClassificationService().predict_scan_type(image_bytes)
+
+    process_time = time.time() - start_time
     return {
         "success": True,
-        "data": result
+        "data": result,
+        "process_time": round(process_time, 4)  # saniye
     }

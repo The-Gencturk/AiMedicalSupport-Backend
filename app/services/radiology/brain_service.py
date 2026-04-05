@@ -34,6 +34,13 @@ MAX_TYPE_SAMPLES = 600
 TYPE_TOP_K = 7
 TYPE_INDEX_TTL_SEC = 30
 TYPE_CONFIDENCE_MIN = 40
+MIN_CLASS_SAMPLES_FOR_TRAIN = 3
+VALIDATION_SPLIT = 0.2
+MIN_VAL_SAMPLES = 8
+MAX_ALLOWED_VAL_LOSS_INCREASE = 0.20
+MAX_ALLOWED_VAL_ACC_DROP = 0.05
+LOW_CONFIDENCE_THRESHOLD = 60
+BORDERLINE_MARGIN = 0.08
 
 
 class BrainRadiologyService(BaseRadiologyService):
@@ -92,7 +99,7 @@ class BrainRadiologyService(BaseRadiologyService):
 
     def _prepare_model_input(self, bgr_img: np.ndarray) -> np.ndarray:
         img_resized = cv2.resize(bgr_img, IMAGE_SIZE)
-        img_norm = img_resized / 255.0
+        img_norm = (img_resized / 255.0).astype(np.float32)
         return np.reshape(img_norm, (1, IMAGE_SIZE[0], IMAGE_SIZE[1], 3))
 
     def analyze(self, image_bytes: bytes) -> dict:
@@ -104,6 +111,15 @@ class BrainRadiologyService(BaseRadiologyService):
 
         is_bleeding = pred > BLEEDING_THRESHOLD
         confidence = int(pred * 100) if is_bleeding else int((1 - pred) * 100)
+        margin = abs(pred - BLEEDING_THRESHOLD)
+        needs_review = (margin < BORDERLINE_MARGIN) or (confidence < LOW_CONFIDENCE_THRESHOLD)
+        review_reason = None
+        if needs_review:
+            if margin < BORDERLINE_MARGIN:
+                review_reason = "borderline_probability"
+            else:
+                review_reason = "low_confidence"
+
         bleeding_type = None
         bleeding_type_confidence = None
         if is_bleeding:
@@ -121,6 +137,8 @@ class BrainRadiologyService(BaseRadiologyService):
             "bleeding_type_confidence": bleeding_type_confidence,
             "finding": bool(is_bleeding),
             "finding_type": bleeding_type,
+            "needs_review": needs_review,
+            "review_reason": review_reason,
         }
 
     def _get_heatmap(self, img_input):
@@ -277,8 +295,9 @@ class BrainRadiologyService(BaseRadiologyService):
         return [bgr_img, cv2.flip(bgr_img, 1), cv2.rotate(bgr_img, cv2.ROTATE_90_CLOCKWISE), bright]
 
     def _build_training_batch(self):
-        samples = self._read_recent_class_samples("bleeding", 1, MAX_REPLAY_SAMPLES_PER_CLASS) + \
-                  self._read_recent_class_samples("normal", 0, MAX_REPLAY_SAMPLES_PER_CLASS)
+        bleeding_samples = self._read_recent_class_samples("bleeding", 1, MAX_REPLAY_SAMPLES_PER_CLASS)
+        normal_samples = self._read_recent_class_samples("normal", 0, MAX_REPLAY_SAMPLES_PER_CLASS)
+        samples = bleeding_samples + normal_samples
         random.shuffle(samples)
         if not samples:
             raise ValueError("No feedback samples available.")
@@ -287,7 +306,52 @@ class BrainRadiologyService(BaseRadiologyService):
             for aug in self._augment(img):
                 x_items.append((cv2.resize(aug, IMAGE_SIZE) / 255.0).astype(np.float32))
                 y_items.append([float(label)])
-        return np.asarray(x_items), np.asarray(y_items)
+        class_counts = {
+            "bleeding": len(bleeding_samples),
+            "normal": len(normal_samples),
+        }
+        return np.asarray(x_items), np.asarray(y_items), class_counts
+
+    def _split_train_val(self, x_all: np.ndarray, y_all: np.ndarray):
+        total = len(x_all)
+        if total < MIN_VAL_SAMPLES:
+            return x_all, y_all, None, None
+
+        val_size = max(4, int(total * VALIDATION_SPLIT))
+        train_size = total - val_size
+        if train_size < 4:
+            return x_all, y_all, None, None
+
+        indices = np.random.permutation(total)
+        val_idx = indices[:val_size]
+        train_idx = indices[val_size:]
+
+        x_train = x_all[train_idx]
+        y_train = y_all[train_idx]
+        x_val = x_all[val_idx]
+        y_val = y_all[val_idx]
+        return x_train, y_train, x_val, y_val
+
+    def _evaluate_on_batch(self, x_data: np.ndarray, y_data: np.ndarray) -> Optional[dict[str, float]]:
+        if x_data is None or y_data is None or len(x_data) == 0:
+            return None
+        metrics = self.model.evaluate(x_data, y_data, verbose=0, return_dict=True)
+        return {
+            "loss": float(metrics.get("loss", 0.0)),
+            "accuracy": float(metrics.get("accuracy", 0.0)),
+        }
+
+    def _is_quality_regression(self, before_metrics: Optional[dict[str, float]], after_metrics: Optional[dict[str, float]]) -> bool:
+        if not before_metrics or not after_metrics:
+            return False
+        before_loss = before_metrics["loss"]
+        after_loss = after_metrics["loss"]
+        before_acc = before_metrics["accuracy"]
+        after_acc = after_metrics["accuracy"]
+
+        loss_degraded = after_loss > (before_loss * (1 + MAX_ALLOWED_VAL_LOSS_INCREASE))
+        acc_degraded = after_acc < (before_acc - MAX_ALLOWED_VAL_ACC_DROP)
+        return loss_degraded and acc_degraded
 
     def _backup_model(self):
         source_path = self._current_model_path
@@ -320,22 +384,70 @@ class BrainRadiologyService(BaseRadiologyService):
     def train(self, image_bytes: bytes, label: int, bleeding_type=None, analysis_id=None, doctor_id=None, **kwargs) -> dict:
         if label not in (0, 1):
             return {"success": False, "message": "Label must be 0 or 1."}
+        if bleeding_type is None:
+            bleeding_type = kwargs.get("finding_type")
+        if label == 0:
+            bleeding_type = None
+
         sample_path = self._save_feedback_sample(image_bytes, label, bleeding_type, analysis_id, doctor_id)
         if sample_path is None:
             return {"success": False, "message": "Feedback sample could not be saved."}
+
         with self._model_lock:
             backup_path = None
             backup_source_path = None
             try:
-                x_train, y_train = self._build_training_batch()
+                x_all, y_all, class_counts = self._build_training_batch()
+                if (
+                    class_counts["bleeding"] < MIN_CLASS_SAMPLES_FOR_TRAIN
+                    or class_counts["normal"] < MIN_CLASS_SAMPLES_FOR_TRAIN
+                ):
+                    event = {
+                        "success": False,
+                        "analysis_id": analysis_id,
+                        "doctor_id": doctor_id,
+                        "label": label,
+                        "bleeding_type": bleeding_type,
+                        "message": "Not enough balanced feedback samples yet.",
+                        "class_counts": class_counts,
+                    }
+                    self._log_training_event(event)
+                    return event
+
+                x_train, y_train, x_val, y_val = self._split_train_val(x_all, y_all)
+                before_metrics = self._evaluate_on_batch(x_val, y_val)
                 backup_path, backup_source_path = self._backup_model()
-                self.model.fit(x_train, y_train, epochs=EPOCHS_PER_REVIEW,
-                               batch_size=min(16, len(x_train)), verbose=0, shuffle=True)
+
+                fit_kwargs = {
+                    "x": x_train,
+                    "y": y_train,
+                    "epochs": EPOCHS_PER_REVIEW,
+                    "batch_size": min(16, len(x_train)),
+                    "verbose": 0,
+                    "shuffle": True,
+                }
+                if x_val is not None and y_val is not None:
+                    fit_kwargs["validation_data"] = (x_val, y_val)
+                self.model.fit(**fit_kwargs)
+
+                after_metrics = self._evaluate_on_batch(x_val, y_val)
+                if self._is_quality_regression(before_metrics, after_metrics):
+                    raise RuntimeError("Quality gate failed: validation metrics regressed.")
+
                 self._atomic_save_model()
                 self._reload_model()
-                event = {"success": True, "analysis_id": analysis_id, "doctor_id": doctor_id,
-                         "label": label, "bleeding_type": bleeding_type,
-                         "samples_used": int(len(x_train))}
+                event = {
+                    "success": True,
+                    "analysis_id": analysis_id,
+                    "doctor_id": doctor_id,
+                    "label": label,
+                    "bleeding_type": bleeding_type,
+                    "samples_used": int(len(x_train)),
+                    "class_counts": class_counts,
+                }
+                if before_metrics and after_metrics:
+                    event["val_before"] = before_metrics
+                    event["val_after"] = after_metrics
                 self._log_training_event(event)
                 return {"success": True, "message": "Model training completed.", **event}
             except Exception as exc:
@@ -346,6 +458,13 @@ class BrainRadiologyService(BaseRadiologyService):
                         self._reload_model()
                     except Exception:
                         pass
-                event = {"success": False, "error": str(exc)}
+                event = {
+                    "success": False,
+                    "analysis_id": analysis_id,
+                    "doctor_id": doctor_id,
+                    "label": label,
+                    "bleeding_type": bleeding_type,
+                    "error": str(exc),
+                }
                 self._log_training_event(event)
                 return {"success": False, "message": "Model training failed.", **event}

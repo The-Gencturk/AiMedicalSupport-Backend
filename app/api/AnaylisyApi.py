@@ -48,10 +48,10 @@ def get_analyses(db: Session = Depends(get_db)):
             "id": a.id,
             "result": a.result,
             "confidence": a.confidence,
-            "is_bleeding": a.is_bleeding,
-            "bleeding_type": a.bleeding_type,
+            "has_finding": a.has_finding,      # ← güncellendi
+            "finding_type": a.finding_type, 
             "status": a.status,
-            
+            "scan_type": a.scan_type,  
             "patient_name": a.patient.full_name if a.patient else "Bilinmiyor",
             "doctor_name": a.doctor.full_name if a.doctor else "Bilinmiyor"
         })

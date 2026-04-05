@@ -16,7 +16,5 @@ feedback_dataset
 dataset/
 classifier.keras
 uploads
-
-
 # Ortam değişkenleri
 .env
