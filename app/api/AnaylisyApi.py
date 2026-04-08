@@ -9,6 +9,8 @@ from typing import Optional
 from app.models.User import User
 from app.schemas.analisy import ReviewCreate, AllAnalysisResponse
 from app.models.AnalisyModel import Analysis
+from pydantic import BaseModel
+from typing import List
 from app.services.classification_service import ClassificationService
 from app.services.analysis_service import (
     create_analysis,
@@ -16,6 +18,7 @@ from app.services.analysis_service import (
     add_review,
     _resolve_upload_path,
     delete_analysis,
+    bulk_delete_analyses
 )
 
 router = APIRouter()
@@ -89,3 +92,14 @@ def get_heatmap(analysis_id: int, db: Session = Depends(get_db)):
 @router.delete("/analyses/{analysis_id}", dependencies=[Depends(require_permission("analyze:delete"))])
 def delete_analysis_endpoint(analysis_id: int, db: Session = Depends(get_db)):
     return delete_analysis(db, analysis_id)
+
+
+
+
+
+class BulkDeleteRequest(BaseModel):
+    analysis_ids: List[int]
+
+@router.delete("/analyses", dependencies=[Depends(require_permission("analyze:delete"))])
+def bulk_delete_analyses_endpoint(payload: BulkDeleteRequest, db: Session = Depends(get_db)):
+    return bulk_delete_analyses(db, payload.analysis_ids)

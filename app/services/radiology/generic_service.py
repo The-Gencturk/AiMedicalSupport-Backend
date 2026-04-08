@@ -206,5 +206,10 @@ class GenericRadiologyService(BaseRadiologyService):
             return None
 
     def train(self, image_bytes: bytes, label: int, **kwargs) -> dict:
-        return {"success": False, "message": "Bu organ icin training henuz desteklenmiyor."}
+        return {
+            "success": False,
+            "message": f"'{self.organ_name}' organi icin egitim henuz desteklenmiyor.",
+            "organ_name": self.organ_name,
+            "attempted": False,
+        }
 

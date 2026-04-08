@@ -228,8 +228,7 @@ class ClassificationService:
                 message = f"{organ} tespit edildi."
             else:
                 message = (
-                    "Tahmin belirsiz; manuel secim onerilir. "
-                    f"(confidence={confidence}%, top_gap={top_gap}%)"
+                    "Tahmin belirsiz manuel secim onerilir."
                 )
 
             return {

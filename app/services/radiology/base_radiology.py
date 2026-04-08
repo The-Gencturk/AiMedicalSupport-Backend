@@ -23,6 +23,14 @@ class BaseRadiologyService(ABC):
     def _get_heatmap(self, img_input: np.ndarray) -> Optional[np.ndarray]:
         pass
 
+    def generate_heatmap(self, img_input: np.ndarray) -> Optional[np.ndarray]:
+        """
+        Public and backward-compatible heatmap entrypoint.
+        New integrations can call this method while legacy services can
+        keep implementing `_get_heatmap`.
+        """
+        return self._get_heatmap(img_input)
+
     @abstractmethod
     def train(self, image_bytes: bytes, label: int, **kwargs) -> dict:
         pass
