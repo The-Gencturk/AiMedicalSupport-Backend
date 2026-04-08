@@ -10,7 +10,7 @@ AiModels/backups/
 AiModels/Lung/
 lung_model.h5
 AiModels/feedback_dataset/
-AiModels/training_logs.jsonl
+AiModels/training_logs.json
 UserProfile
 feedback_dataset
 dataset/
